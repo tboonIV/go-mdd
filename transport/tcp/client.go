@@ -1,7 +1,6 @@
 package tcp
 
 import (
-	"context"
 	"net"
 )
 
@@ -31,7 +30,7 @@ func (c *ClientTransport) Send(request []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	response, err := Read(context.Background(), c.conn)
+	response, err := Read(c.conn)
 	if err != nil {
 		return nil, err
 	}

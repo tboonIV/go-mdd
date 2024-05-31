@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -42,7 +43,7 @@ func Write(conn net.Conn, encoded []byte) error {
 	return nil
 }
 
-func Read(ctx context.Context, conn net.Conn) ([]byte, error) {
+func Read(conn net.Conn) ([]byte, error) {
 	var len uint32
 	if err := binary.Read(conn, binary.BigEndian, &len); err != nil {
 		return nil, err
@@ -54,6 +55,14 @@ func Read(ctx context.Context, conn net.Conn) ([]byte, error) {
 		log.Tracef("%s Reading %d bytes from TCP",
 			connStr(conn),
 			len)
+	}
+
+	// Hard code 10 second for now. Make it configurable later
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	deadline, ok := ctx.Deadline()
+	if ok {
+		log.Tracef("Setting read deadline to %v", deadline)
 	}
 
 	payload := make([]byte, len)
