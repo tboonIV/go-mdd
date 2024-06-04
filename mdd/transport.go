@@ -1,5 +1,10 @@
 package mdd
 
+import (
+	"context"
+	"time"
+)
+
 type ClientTransport interface {
 	Send([]byte) ([]byte, error)
 	Close() error
@@ -23,17 +28,33 @@ func (c *Client) SendMessage(request *Containers) (*Containers, error) {
 		return nil, err
 	}
 
-	respBody, err := c.Transport.Send(reqBody)
-	if err != nil {
-		return nil, err
-	}
+	// Hard code 10 second for now. Make it configurable later
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
-	response, err := c.Codec.Decode(respBody)
-	if err != nil {
-		return nil, err
-	}
+	resultCh := make(chan []byte)
+	errorCh := make(chan error)
+	go func() {
+		respBody, err := c.Transport.Send(reqBody)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		resultCh <- respBody
+	}()
 
-	return response, nil
+	select {
+	case respBody := <-resultCh:
+		response, err := c.Codec.Decode(respBody)
+		if err != nil {
+			return nil, err
+		}
+		return response, nil
+	case err := <-errorCh:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 type Server struct {
