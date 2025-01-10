@@ -69,6 +69,13 @@ func (c *Containers) CastVersion(definitions *dictionary.Dictionary, schemaVersi
 	newContainers := &Containers{}
 	for i := range c.Containers {
 		container := &c.Containers[i]
+
+		// skip cast if version same
+		if container.Header.SchemaVersion == schemaVersion && container.Header.ExtVersion == extVersion {
+			newContainers.Containers = append(newContainers.Containers, *container)
+			continue
+		}
+
 		targetDefinition, err := definitions.Lookup(
 			container.Header.Key,
 			schemaVersion,
